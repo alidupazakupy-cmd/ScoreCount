@@ -104,7 +104,7 @@ td.self{background:var(--gs,#4b2a8a)}
 </head>
 <body>
 <div class="wrap">
-  <h1 id="ttl">Scoreboard</h1>
+  <h1 id="ttl">ScoreCount</h1>
   <p class="sub">Eurovision-style voting simulator: jury votes first, then the televote.</p>
 
   <div id="setup">
@@ -210,7 +210,7 @@ var SEL=0,VIEW="grid",S=load(),R=null,timer=null;
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function load(){try{var r=localStorage.getItem(KEY);if(r){var s=JSON.parse(r);if(s&&s.names&&s.jury){if(!s.v3){var e0=mm(s);s.jury=s.names.map(function(){var a=[];for(var i=0;i<e0;i++)a.push(-1);return a});s.v3=true;s.saved=false}ensureGrids(s);return s}}}catch(e){}
-var s={title:"Scoreboard",c1:"#e6007e",c2:"#00a6d6",scale:PTS.slice(),saved:false,v3:true,names:DEF.slice()};gen(s);ensureGrids(s);return s}
+var s={title:"ScoreCount",c1:"#e6007e",c2:"#00a6d6",scale:PTS.slice(),saved:false,v3:true,names:DEF.slice()};gen(s);ensureGrids(s);return s}
 function save(){commitGrid();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function mm(s){return Math.min(s.scale.length,s.names.length-1)}
 function gen(s,rnd){var n=s.names.length,m=mm(s),st=s.names.map(function(){return Math.random()});
@@ -221,7 +221,7 @@ s.xv=(s.xv||[]).map(function(x){var mx=Math.min(s.scale.length,n);return{name:x.
 if(!Array.isArray(s.skip))s.skip=[]}
 function voters(g){var out=[];S.names.forEach(function(nm,i){if((g.skip||[]).indexOf(norm(nm))<0)out.push({name:nm,p:i,row:(g.jury||[])[i]||[]})});(g.xv||[]).forEach(function(x,j){out.push({name:x.name,p:-1,x:j,row:x.votes||[]})});return out}
 function vm(g,extra){return Math.min(g.scale.length,S.names.length-(extra?0:1))}
-function applyTheme(){var r=document.documentElement.style;r.setProperty("--c1",S.c1);r.setProperty("--c2",S.c2);r.setProperty("--gl",S.gl||"#2a9d8f");if(S.gh)r.setProperty("--ght",lum(S.gh)>140?"#111":"#fff");else r.removeProperty("--ght");r.setProperty("--gs",S.gs||"#4b2a8a");if(S.gh)r.setProperty("--gh",S.gh);else r.removeProperty("--gh");if(S.gb){r.setProperty("--gb",S.gb);var q=parseInt(S.gb.slice(1),16),L=((q>>16)*299+((q>>8)&255)*587+(q&255)*114)/1000;r.setProperty("--gt",L>140?"#111":"#fff")}else{r.removeProperty("--gb");r.removeProperty("--gt")}$("gb").value=S.gb||"#1d1536";$("gl").value=S.gl||"#2a9d8f";$("gs").value=S.gs||"#4b2a8a";$("gh").value=S.gh||"#1d1536";$("ttl").textContent=S.title||"Scoreboard";document.title=S.title||"Scoreboard"}
+function applyTheme(){var r=document.documentElement.style;r.setProperty("--c1",S.c1);r.setProperty("--c2",S.c2);r.setProperty("--gl",S.gl||"#2a9d8f");if(S.gh)r.setProperty("--ght",lum(S.gh)>140?"#111":"#fff");else r.removeProperty("--ght");r.setProperty("--gs",S.gs||"#4b2a8a");if(S.gh)r.setProperty("--gh",S.gh);else r.removeProperty("--gh");if(S.gb){r.setProperty("--gb",S.gb);var q=parseInt(S.gb.slice(1),16),L=((q>>16)*299+((q>>8)&255)*587+(q&255)*114)/1000;r.setProperty("--gt",L>140?"#111":"#fff")}else{r.removeProperty("--gb");r.removeProperty("--gt")}$("gb").value=S.gb||"#1d1536";$("gl").value=S.gl||"#2a9d8f";$("gs").value=S.gs||"#4b2a8a";$("gh").value=S.gh||"#1d1536";$("ttl").textContent=S.title||"ScoreCount";document.title=S.title||"ScoreCount"}
 function fillSetup(){$("title").value=S.title;$("c1").value=S.c1;$("c2").value=S.c2;$("names").value=S.names.join("\n");$("scale").value=S.scale.join(", ");fillVoters();applyFont();fillFonts();renderTabs();$("gname").value=S.grids[SEL].name;if(S.saved)grid();applyTheme();if($("dtxt"))dFill()}
 function fillVoters(){var v=$("voter"),cur=+v.value||0,vs=voters(S);
 v.innerHTML=vs.length?vs.map(function(o,i){return'<option value="'+i+'">'+esc(dn(o.name))+(o.p<0?' (extra)':'')+'</option>'}).join(""):'<option value="">– no voters –</option>';
@@ -457,7 +457,7 @@ var hh=Math.max(R(cw*1.13),Math.ceil(mw)+18);
 savePng(drawTable(Object.assign({},pal(),{title:S.title,w:w,hh:hh,rh:cw,fs:R(cw*.5),nfs:R(cw*.58),vfs:vfs,hdr:hd,rows:M.rows})),M.comb?"voting-grid-combined.png":"voting-grid.png")})}
 function boardPng(){if(!R)return;var o=S.names.map(function(_,i){return i}).sort(function(a,b){return tot(b)-tot(a)||a-b});
 var hd=[{t:"#"},{t:"Country"},{t:"Jury"},{t:"Tele"},{t:"Total"}],rows=o.map(function(i,r){return[{t:String(r+1)},{l:1,f:fl(S.names[i]),fh:fh(S.names[i]),t:dn(S.names[i])},{t:String(R.jt[i])},{t:R.hasTele&&R.phase!=="jury"?String(R.tt[i]):"–"},{t:String(tot(i))}]});
-withFonts(allFlags(),function(){savePng(drawTable(Object.assign({},pal(),{title:(S.title||"Scoreboard")+" – "+$("stat").textContent,w:[56,360,100,100,110],hh:56,rh:46,hdr:hd,rows:rows})),"scoreboard.png")})}
+withFonts(allFlags(),function(){savePng(drawTable(Object.assign({},pal(),{title:(S.title||"ScoreCount")+" – "+$("stat").textContent,w:[56,360,100,100,110],hh:56,rh:46,hdr:hd,rows:rows})),"scoreboard.png")})}
 $("gpng").addEventListener("click",gridPng);$("spng").addEventListener("click",boardPng);
 $("dlProj").addEventListener("click",function(){commitGrid();var j=JSON.stringify(S);if(DL)DL.save({filename:"scoreboard-project.json",data:j}).catch(function(){});else{$("pasteJ").value=j;$("lmsg").textContent="Copy this text and save it as a .json file (e.g. in Notepad)."}});
 function loadProject(txt){var m=$("lmsg");try{var o=JSON.parse(txt);if(!o||!Array.isArray(o.names)||o.names.length<3)throw 0;var n=o.names.length;
