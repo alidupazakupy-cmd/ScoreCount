@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard – voting simulator</title>
+<style>
+:root{--bg:#f4f2f8;--surface:#fff;--ink:#1b1530;--muted:#6b6483;--line:#d9d3e8;--c1:#e6007e;--c2:#00a6d6;--on:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#120c24;--surface:#1d1536;--ink:#f1ecff;--muted:#a79fc4;--line:#352a58}}
+:root[data-theme="dark"]{--bg:#120c24;--surface:#1d1536;--ink:#f1ecff;--muted:#a79fc4;--line:#352a58}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Archivo","Segoe UI",system-ui,sans-serif;font-size:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--c2);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:18px 14px 60px}
+h1{margin:0 0 4px;font-size:1.9rem;letter-spacing:-.5px;background:linear-gradient(90deg,var(--c1),var(--c2));-webkit-background-clip:text;background-clip:text;color:transparent}
+p.sub{margin:0 0 18px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.panel h2{margin:0 0 10px;font-size:1.1rem}
+label{display:block;color:var(--muted);font-size:.9rem;margin-bottom:4px}
+input[type=text],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+textarea{min-height:190px;resize:vertical}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.cols{grid-template-columns:1fr}}
+.colors{display:flex;gap:12px;align-items:end}
+input[type=color]{width:56px;height:38px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 15px;border-radius:8px;font-weight:600}
+.btn.main{background:linear-gradient(90deg,var(--c1),var(--c2));color:var(--on);border:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.slot{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;margin-bottom:6px}
+.slot b{text-align:right;color:var(--c1)}
+.hint{color:var(--muted);font-size:.9rem;margin:6px 0 0}
+.status{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.status strong{font-size:1.25rem}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width .3s}
+#board{position:relative}
+.row{position:absolute;left:0;right:0;height:40px;display:grid;grid-template-columns:34px 1fr 52px 52px 66px;align-items:center;gap:6px;padding:0 10px 0 0;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c1);border-radius:8px;transition:transform .7s cubic-bezier(.3,.7,.2,1)}
+.row .rk{text-align:center;font-weight:800;color:var(--muted)}
+.row .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .j,.row .t{text-align:right;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.row .tot{text-align:right;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.row.hot{border-color:var(--c2);border-left-color:var(--c2)}
+.row.hot .tot{color:var(--c2)}
+.row .pop{position:absolute;right:76px;top:-10px;background:var(--c1);color:var(--on);font-weight:800;padding:1px 8px;border-radius:999px;font-size:.9rem;pointer-events:none}
+.head{display:grid;grid-template-columns:34px 1fr 52px 52px 66px;gap:6px;padding:0 10px 4px 0;color:var(--muted);font-size:.8rem;text-align:right}
+.head span:nth-child(2){text-align:left}
+.win{margin:14px 0;padding:14px;text-align:center;font-size:1.4rem;font-weight:800;border-radius:12px;color:var(--on);background:linear-gradient(90deg,var(--c1),var(--c2))}
+input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.gridw{overflow-x:auto}
+#gridPanel{width:min(1500px,calc(100vw - 28px));position:relative;left:50%;transform:translateX(-50%)}
+th:nth-child(1){width:34px}th:nth-child(2){width:20%}th:nth-child(3),th:nth-child(4),th.t{width:52px}
+table{border-collapse:collapse;font-variant-numeric:tabular-nums;width:100%;table-layout:fixed}
+th,td{border:1px solid var(--gl,var(--line));padding:4px 2px;text-align:center;font-size:clamp(.62rem,1.15vw,.95rem);white-space:nowrap;overflow:hidden}
+th{background:var(--gh,var(--surface));color:var(--ght,inherit)}
+td.hc{background:var(--gh,var(--surface));color:var(--ght,inherit)}
+td{background:var(--gb,transparent);color:var(--gt,inherit)}
+td.l{text-align:left;font-weight:700;text-overflow:ellipsis;padding-left:6px}
+td.l .fl{font-size:1.3em;line-height:1;vertical-align:-.12em}
+th.v{padding:6px 2px;font-size:clamp(.8rem,1.6vw,1.3rem)}
+th.v span{display:block;margin:0 auto 4px;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+th.v i{display:block}
+td.self{background:var(--gs,#4b2a8a)}
+#ttl,#grid,#show{font-family:var(--ff,"Archivo","Segoe UI",system-ui,sans-serif)}
+#grid table{width:auto;margin:0 auto}
+#grid th{width:auto}
+#grid th,#grid td{padding:0;height:var(--cs,40px);font-size:max(.75rem,calc(var(--cs,40px)*.5))}
+#grid th{height:calc(var(--cs,40px)*1.13);font-size:max(.75rem,calc(var(--cs,40px)*.46))}
+#grid th.v{font-size:max(.7rem,calc(var(--cs,40px)*.42));line-height:1;height:auto;padding:6px 0;vertical-align:bottom}
+#grid th.v span{margin:0 auto}
+#grid th.fg{font-size:calc(var(--cs,40px)*.62);line-height:1;height:auto;padding:6px 0;vertical-align:bottom}
+#grid td.l{padding-left:8px;font-weight:500;font-size:max(.85rem,calc(var(--cs,40px)*.58))}
+#grid td.l .fl{font-size:1.2em}
+#grid th.b,#grid td.b{font-weight:800}
+.fl{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-style:normal}
+.fi{width:1.15em;height:1.15em;vertical-align:-.2em;display:inline-block}
+.oin{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.oin .nm{flex:1 1 130px;min-width:110px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oin input[type=text]{flex:2 1 170px;width:auto;min-width:0}
+.oin .oa{width:80px;text-align:right;margin:0;font-variant-numeric:tabular-nums}
+.ohead,.orow{display:grid;grid-template-columns:34px 1fr 60px 64px 48px;gap:6px;align-items:center;padding:6px 10px 6px 0}
+.ohead.nq,.orow.nq{grid-template-columns:34px 1fr 60px 64px}
+.ohead{color:var(--muted);font-size:.8rem;text-align:right;padding-bottom:4px;padding-top:0}
+.ohead span:nth-child(2){text-align:left}
+.orow{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c1);border-radius:8px;margin-bottom:6px}
+.orow.cut{margin-bottom:16px;border-bottom:2px solid var(--c2)}
+.orow .rk{text-align:center;font-weight:800;color:var(--muted)}
+.orow .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orow .a,.orow .p{text-align:right;font-variant-numeric:tabular-nums}
+.orow .p{font-weight:800}
+.orow .q{text-align:center;font-weight:800;border-radius:999px;padding:1px 0;font-size:.85rem}
+.orow .q.yes{background:linear-gradient(90deg,var(--c1),var(--c2));color:var(--on)}
+.orow .q.no{color:var(--muted);border:1px solid var(--line)}
+.orow.drw{grid-template-columns:34px 1fr}
+.drw-h{margin:0 0 8px;font-size:1rem;color:var(--c1)}
+.hide{display:none}
+.vchk{display:inline-flex;align-items:center;gap:4px;margin:0 12px 6px 0;color:var(--ink);font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="ttl">Scoreboard</h1>
+  <p class="sub">Eurovision-style voting simulator: jury votes first, then the televote.</p>
+
+  <div id="setup">
+    <div class="panel">
+      <h2>Settings</h2>
+      <div class="cols">
+        <div>
+          <label for="title">Contest name</label>
+          <input type="text" id="title" maxlength="40">
+          <div class="colors" style="margin-top:12px">
+            <div><label for="c1">Color 1</label><input type="color" id="c1"></div>
+            <div><label for="c2">Color 2</label><input type="color" id="c2"></div>
+          </div>
+          <label for="fsel" style="margin-top:12px">Font</label>
+          <select id="fsel"></select>
+          <div class="btns" style="margin:8px 0 0"><button class="btn" id="floc" type="button">My computer fonts</button><button class="btn" id="fup" type="button">Upload font file</button><input type="file" id="fupf" accept=".ttf,.otf,.woff,.woff2" hidden></div>
+          <input type="text" id="ftype" placeholder="…or type an installed font name" maxlength="60" style="margin-top:8px">
+          <p class="hint" id="fmsg"></p>
+          <label for="scale" style="margin-top:12px">Points scale of the selected grid (comma-separated)</label>
+          <input type="text" id="scale">
+        </div>
+        <div>
+          <label for="names">Participants (one per line, 3 to 40)</label>
+          <textarea id="names"></textarea>
+          <div class="btns" style="margin-top:6px"><select id="cpick" aria-label="Choose a country" style="flex:1;min-width:140px"></select><button class="btn" id="cadd" type="button">Add country</button></div>
+          <p class="hint" id="fprev"></p>
+        </div>
+      </div>
+      <div class="btns"><button class="btn" id="apply" type="button">Apply list</button></div>
+      <p class="hint">In jury grids every participant is also a voter and gives points from the scale to the others (e.g. 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 17, 20). Changing the scale clears the votes of the selected grid.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Voting grids</h2>
+      <div class="btns" id="gtabs" style="margin:0 0 8px"></div>
+      <div class="btns" style="margin:0 0 12px;align-items:center"><input type="text" id="gname" maxlength="24" aria-label="Grid name" style="max-width:200px"><button class="btn" id="gadd" type="button">+ Jury grid</button><button class="btn" id="gaddt" type="button">+ Televote</button><button class="btn" id="gdel" type="button">Delete grid</button></div>
+      <p class="hint" style="margin:0 0 10px">A televote tab works exactly like a jury grid (its own voters and scale), but in “Combined” its voters are hidden and only the televote result is shown next to the full jury grid. In a new televote tab nobody votes yet: add voters below.</p>
+      <div id="juryEdit"><label>Who votes in this grid (untick a participant to stop them voting; they can still receive points)</label>
+      <div class="btns" style="margin:0 0 8px"><button class="btn" id="vall" type="button">Select all</button><button class="btn" id="vnone" type="button">Unselect all</button></div>
+      <div id="vparts" style="margin-bottom:6px"></div>
+      <label for="xvname" style="margin-top:8px">Extra voters (not participants)</label>
+      <div class="btns" style="margin:0 0 6px"><input type="text" id="xvname" maxlength="30" placeholder="Voter name" style="max-width:220px"><button class="btn" id="xvadd" type="button">Add voter</button></div>
+      <div id="xvlist" style="margin-bottom:12px"></div>
+      <label for="voter">Voter</label>
+      <select id="voter"></select>
+      <div id="slots" style="margin-top:10px"></div>
+      <p class="hint">Picking an entry that already received points from this voter swaps the two.</p></div>
+    </div>
+    <div class="btns"><button class="btn main" id="saveV" type="button">Save votes</button><button class="btn main" id="start" type="button">Start voting</button><button class="btn" id="rand" type="button">Randomize jury votes</button><button class="btn" id="clr" type="button">Clear jury votes</button></div>
+    <div class="btns"><button class="btn" id="dlProj" type="button">Save project (.json)</button><button class="btn" id="upBtn" type="button">Upload JSON</button><input type="file" id="ldProj" accept=".json,application/json,text/plain" hidden></div>
+    <div class="panel" style="margin-top:10px"><label for="pasteJ">…or paste project JSON here (you can also drop a .json file on this box)</label><textarea id="pasteJ" style="min-height:90px" placeholder="{ ... }"></textarea><div class="btns"><button class="btn" id="pasteBtn" type="button">Load pasted JSON</button></div><p class="hint" id="lmsg"></p></div>
+    <div class="panel hide" id="gridPanel" style="margin-top:14px"><h2>Voting grid</h2>
+<div class="btns" id="gtabs2" style="margin:0 0 12px"></div>
+<div class="btns" style="margin:0 0 12px;align-items:end"><div><label for="gl">Lines</label><input type="color" id="gl"></div><div><label for="gh">Header</label><input type="color" id="gh"></div><div><label for="gb">Background</label><input type="color" id="gb"></div><div><label for="gs">Own country</label><input type="color" id="gs"></div><label class="btn" id="gimg" style="position:relative;display:inline-block;cursor:pointer;overflow:hidden">Colors from image<input type="file" id="gimgf" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0"></label><button class="btn" id="gpaste" type="button">Paste image</button><span id="gimgm" class="hint" style="align-self:center;margin:0"></span><button class="btn" id="gres" type="button">Default colors</button><button class="btn" id="gpng" type="button">Download PNG</button></div>
+<div class="gridw" id="grid"></div></div>
+    <div class="panel" id="oddsPanel" style="margin-top:14px"><h2>Odds – ratings</h2>
+      <div class="btns" id="otabs" style="margin:0 0 8px"></div>
+      <div class="btns" style="margin:0 0 12px;align-items:center"><input type="text" id="oname" maxlength="24" aria-label="Tab name" style="max-width:200px"><button class="btn" id="oadds" type="button">+ Semi-final</button><button class="btn" id="oaddf" type="button">+ Grand final</button><button class="btn" id="odel" type="button">Delete tab</button></div>
+      <div id="oqwrap" class="btns" style="margin:0 0 10px;align-items:center"><label for="oq" style="margin:0">Qualifiers (Q)</label><input type="number" id="oq" min="1" max="40" style="width:90px"></div>
+      <div id="omwrap" class="btns" style="margin:0 0 10px;align-items:center"><label for="omodel" style="margin:0">Final odds model</label><select id="omodel" style="width:auto"><option value="soft">Inflated (softmax)</option><option value="prop">Proportional</option></select><label for="ok" style="margin:0">Inflation k</label><input type="number" id="ok" min="0" max="10" step="any" style="width:90px"></div>
+      <div class="btns" style="margin:0 0 8px"><button class="btn" id="oall" type="button">Select all</button><button class="btn" id="onone" type="button">Unselect all</button></div>
+      <p class="hint" style="margin:0 0 8px">Tick the countries that belong in this list. Next to each flag type your ratings from 0 to 10 separated by commas – the average is calculated from them. When every ticked country is filled in, the percentages appear. Semi-final: chance to qualify, scaled so all countries together add up to Q × 100% (e.g. 10 qualifiers = 1000%). Grand final: winner odds inflated with a softmax of the averages (k adjustable; the better averages get disproportionately more), always adds up to 100%.</p>
+      <div id="oin"></div>
+      <h2 style="margin-top:14px">Result</h2><div id="ores"></div>
+      <div id="odw" class="hide"><h2 style="margin-top:18px">Discord output</h2>
+      <div class="btns" style="margin:0 0 8px;align-items:end"><div><label for="ohost">Host emoji code</label><input type="text" id="ohost" style="width:170px"></div><div><label for="oping">Role ping</label><input type="text" id="oping" style="width:260px"></div><button class="btn main" id="ocopy" type="button">Copy text</button></div>
+      <textarea id="odtxt" readonly style="min-height:300px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem"></textarea></div>
+      <h2 style="margin-top:18px">Random results</h2>
+      <p class="hint" style="margin:0 0 8px">Generates points for every ticked country from its odds. The more deviation, the more the points can differ from the odds (upsets, swapped places). 0% = points follow the odds exactly. Works once all ratings are filled in.</p>
+      <div class="btns" style="margin:0 0 10px;align-items:end"><div><label for="opp">Points per 1% of odds</label><input type="number" id="opp" min="0" step="any" style="width:140px"></div><div><label for="odev">Deviation from odds (%)</label><input type="number" id="odev" min="0" max="100" step="any" style="width:140px"></div><button class="btn main" id="ogen" type="button">Generate results</button><button class="btn" id="ocl" type="button">Clear</button></div>
+      <div id="ogres"></div>
+    </div>
+    <div class="panel" id="drawPanel" style="margin-top:14px"><h2>Semi-final &amp; Grand final draw</h2>
+      <p class="hint" style="margin:0 0 8px">Add a list of countries (one per line). Press “Draw semi-finals” and they are split randomly into Semi-final 1 and Semi-final 2 (if the number is odd, Semi-final 1 gets one more). “Draw Grand final” puts all countries from the list in a random running order.</p>
+      <textarea id="dtxt" style="min-height:150px" placeholder="Poland&#10;Sweden&#10;Italy&#10;..."></textarea>
+      <div class="btns"><select id="dpick" aria-label="Choose a country" style="flex:1;min-width:140px"></select><button class="btn" id="dadd" type="button">Add country</button><button class="btn" id="dpart" type="button">Load participants</button></div>
+      <div class="btns"><button class="btn main" id="ddraw" type="button">Draw semi-finals</button><button class="btn main" id="ddrawf" type="button">Draw Grand final</button><button class="btn" id="dcopy" type="button">Copy text</button><button class="btn" id="dclr" type="button">Clear</button></div>
+      <p class="hint" id="dmsg"></p>
+      <div id="dres" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div id="show" class="hide">
+    <div class="status"><strong id="stat"></strong><span id="cnt" class="hint"></span></div>
+    <div class="bar"><i id="prog"></i></div>
+    <div class="btns" style="margin:0 0 14px">
+      <button class="btn main" id="next" type="button">Next point</button>
+      <button class="btn" id="country" type="button">Whole vote</button>
+      <button class="btn" id="auto" type="button">Auto</button>
+      <button class="btn" id="back" type="button">Back to settings</button>
+      <button class="btn" id="spng" type="button">Download PNG</button>
+    </div>
+    <div id="win" class="win hide"></div>
+    <div class="head"><span>#</span><span>Country</span><span>Jury</span><span>Tele</span><span>Total</span></div>
+    <div id="board"></div>
+  </div>
+</div>
+<div id="pngView" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.85);overflow:auto;padding:16px;z-index:50"><div style="max-width:1500px;margin:0 auto"><p style="color:#fff;margin:0 0 10px">Right-click the image (or long-press on a phone) and choose “Save image”.</p><button class="btn" id="pngClose" type="button">Close</button><img alt="Exported PNG" style="display:block;max-width:100%;margin-top:10px;border-radius:6px"></div></div>
+<script>
+var PTS=[1,2,3,4,5,6,7,8,10,12],KEY="scoreboard-eurowizja-v2",RH=46;
+var DEF=["Poland","Sweden","Italy","Ukraine","Spain","France","Norway","Finland","Croatia","Netherlands","Ireland","Greece","Switzerland","Lithuania","Portugal","Czechia","Estonia","Albania","Austria","Iceland"];
+var SEL=0,VIEW="grid",S=load(),R=null,timer=null;
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function load(){try{var r=localStorage.getItem(KEY);if(r){var s=JSON.parse(r);if(s&&s.names&&s.jury){if(!s.v3){var e0=mm(s);s.jury=s.names.map(function(){var a=[];for(var i=0;i<e0;i++)a.push(-1);return a});s.v3=true;s.saved=false}ensureGrids(s);return s}}}catch(e){}
+var s={title:"Scoreboard",c1:"#e6007e",c2:"#00a6d6",scale:PTS.slice(),saved:false,v3:true,names:DEF.slice()};gen(s);ensureGrids(s);return s}
+function save(){commitGrid();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function mm(s){return Math.min(s.scale.length,s.names.length-1)}
+function gen(s,rnd){var n=s.names.length,m=mm(s),st=s.names.map(function(){return Math.random()});
+function pick(skip,mx){var o=[];for(var i=0;i<n;i++)if(i!==skip)o.push({i:i,k:st[i]+Math.random()*.7});o.sort(function(a,b){return b.k-a.k});return o.slice(0,mx).map(function(x){return x.i}).reverse()}
+function empty(mx){var e=[];for(var q=0;q<mx;q++)e.push(-1);return e}
+s.jury=s.names.map(function(_,v){return rnd?pick(v,m):empty(m)});
+s.xv=(s.xv||[]).map(function(x){var mx=Math.min(s.scale.length,n);return{name:x.name,votes:rnd?pick(-1,mx):empty(mx)}});
+if(!Array.isArray(s.skip))s.skip=[]}
+function voters(g){var out=[];S.names.forEach(function(nm,i){if((g.skip||[]).indexOf(norm(nm))<0)out.push({name:nm,p:i,row:(g.jury||[])[i]||[]})});(g.xv||[]).forEach(function(x,j){out.push({name:x.name,p:-1,x:j,row:x.votes||[]})});return out}
+function vm(g,extra){return Math.min(g.scale.length,S.names.length-(extra?0:1))}
+function applyTheme(){var r=document.documentElement.style;r.setProperty("--c1",S.c1);r.setProperty("--c2",S.c2);r.setProperty("--gl",S.gl||"#2a9d8f");if(S.gh)r.setProperty("--ght",lum(S.gh)>140?"#111":"#fff");else r.removeProperty("--ght");r.setProperty("--gs",S.gs||"#4b2a8a");if(S.gh)r.setProperty("--gh",S.gh);else r.removeProperty("--gh");if(S.gb){r.setProperty("--gb",S.gb);var q=parseInt(S.gb.slice(1),16),L=((q>>16)*299+((q>>8)&255)*587+(q&255)*114)/1000;r.setProperty("--gt",L>140?"#111":"#fff")}else{r.removeProperty("--gb");r.removeProperty("--gt")}$("gb").value=S.gb||"#1d1536";$("gl").value=S.gl||"#2a9d8f";$("gs").value=S.gs||"#4b2a8a";$("gh").value=S.gh||"#1d1536";$("ttl").textContent=S.title||"Scoreboard";document.title=S.title||"Scoreboard"}
+function fillSetup(){$("title").value=S.title;$("c1").value=S.c1;$("c2").value=S.c2;$("names").value=S.names.join("\n");$("scale").value=S.scale.join(", ");fillVoters();applyFont();fillFonts();renderTabs();$("gname").value=S.grids[SEL].name;if(S.saved)grid();applyTheme();if($("dtxt"))dFill()}
+function fillVoters(){var v=$("voter"),cur=+v.value||0,vs=voters(S);
+v.innerHTML=vs.length?vs.map(function(o,i){return'<option value="'+i+'">'+esc(dn(o.name))+(o.p<0?' (extra)':'')+'</option>'}).join(""):'<option value="">– no voters –</option>';
+if(vs.length)v.value=Math.min(cur,vs.length-1);fillVoterUI();fillSlots()}
+function fillVoterUI(){$("vparts").innerHTML=S.names.map(function(nm,i){return'<label class="vchk"><input type="checkbox" data-p="'+i+'"'+(S.skip.indexOf(norm(nm))<0?' checked':'')+'> <i class="fl">'+fh(nm)+'</i> '+esc(dn(nm))+'</label>'}).join("");
+$("xvlist").innerHTML=S.xv.length?S.xv.map(function(x,j){return'<span class="vchk">'+esc(x.name)+' <button class="btn" type="button" data-xd="'+j+'" aria-label="Remove voter '+esc(x.name)+'" style="padding:2px 8px">✕</button></span>'}).join(""):'<span class="hint">No extra voters yet.</span>'}
+function fillSlots(){var vs=voters(S),vo=vs[+$("voter").value];
+if(!vo){$("slots").innerHTML='<p class="hint">No voters in this grid. Tick a participant above or add an extra voter.</p>';return}
+var m=vm(S,vo.p<0),ps=S.scale.slice(S.scale.length-m),h="";
+for(var k=m-1;k>=0;k--){h+='<div class="slot"><b>'+ps[k]+' pts</b><select data-k="'+k+'" aria-label="'+ps[k]+' points">';
+h+='<option value="-1">–</option>';S.names.forEach(function(n,i){if(i!==vo.p)h+='<option value="'+i+'"'+(vo.row[k]===i?" selected":"")+'>'+esc(dn(n))+'</option>'});h+="</select></div>"}
+$("slots").innerHTML=h}
+$("slots").addEventListener("change",function(e){var t=e.target,k=+t.dataset.k,vo=voters(S)[+$("voter").value];if(!vo)return;var j=vo.row,nv=+t.value,o=j.indexOf(nv);
+if(nv>-1&&o>-1&&o!==k)j[o]=j[k];j[k]=nv;save();fillSlots();if(S.saved)grid()});
+$("vparts").addEventListener("change",function(e){var p=e.target.dataset.p;if(p===undefined)return;var k=norm(S.names[+p]),ix=S.skip.indexOf(k);if(e.target.checked){if(ix>=0)S.skip.splice(ix,1)}else if(ix<0)S.skip.push(k);save();fillVoters();if(S.saved)grid()});
+function setAllVoters(on){var ks=S.names.map(norm);S.skip=S.skip.filter(function(k){return ks.indexOf(k)<0});if(!on)S.skip=S.skip.concat(ks);save();fillVoters();if(S.saved)grid()}
+$("vall").addEventListener("click",function(){setAllVoters(true)});
+$("vnone").addEventListener("click",function(){setAllVoters(false)});
+function addXv(){var inp=$("xvname"),nm=inp.value.trim().slice(0,30);if(!nm)return;
+if(S.xv.some(function(x){return norm(x.name)===norm(nm)})){alert("There is already an extra voter with this name.");return}
+var row=[];for(var q=0;q<Math.min(S.scale.length,S.names.length);q++)row.push(-1);S.xv.push({name:nm,votes:row});inp.value="";save();fillVoters();$("voter").value=voters(S).length-1;fillSlots();if(S.saved)grid()}
+$("xvadd").addEventListener("click",addXv);$("xvname").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();addXv()}});
+$("xvlist").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button[data-xd]");if(!b)return;S.xv.splice(+b.dataset.xd,1);save();fillVoters();if(S.saved)grid()});
+$("voter").addEventListener("change",fillSlots);
+["title","c1","c2"].forEach(function(id){$(id).addEventListener("input",function(){S[id]=$(id).value;applyTheme();save()})});
+$("apply").addEventListener("click",function(){var n=$("names").value.split("\n").map(function(x){return x.trim()}).filter(Boolean).slice(0,40);
+if(n.length<3){alert("Enter at least 3 participants.");return}applyNames()});
+$("rand").addEventListener("click",function(){gen(S,true);save();fillSlots();if(S.saved)grid()});
+$("start").addEventListener("click",startShow);
+$("back").addEventListener("click",function(){stop();$("show").classList.add("hide");$("setup").classList.remove("hide")});
+$("next").addEventListener("click",function(){stop();step()});
+$("country").addEventListener("click",function(){stop();var v=R.v,ph=R.phase;while(R.phase===ph&&R.v===v&&R.phase!=="end"){step();if(ph==="tele")break}});
+$("auto").addEventListener("click",function(){if(timer){stop()}else{$("auto").textContent="Stop";loop()}});
+function stop(){if(timer){clearTimeout(timer);timer=null}$("auto").textContent="Auto"}
+function loop(){if(R.phase==="end"){stop();return}var fin=step();timer=setTimeout(loop,fin?1500:650)}
+function toTele(){R.last={};if(R.hasTele){R.phase="tele";R.q=S.names.map(function(_,i){return i}).sort(function(a,b){return R.jt[a]-R.jt[b]||a-b});R.qi=0}else R.phase="end"}
+function playGrid(){var g=S.grids[SEL];if(g&&isJury(g))return g;return S.grids.filter(isJury)[0]||null}
+function startShow(){commitGrid();var n=S.names.length,g=playGrid(),tg=S.grids.filter(isTele),vs=g?voters(g).map(function(o){var m=vm(g,o.p<0);return{name:o.name,p:o.p,row:o.row,m:m,ps:g.scale.slice(g.scale.length-m)}}):[],tm=S.names.map(function(){return 0});
+tg.forEach(function(x){juryCells([x]).jt.forEach(function(v,i){tm[i]+=v})});
+R={phase:"jury",v:0,p:0,qi:0,jt:S.names.map(function(){return 0}),tt:S.names.map(function(){return 0}),last:{},q:[],vs:vs,hasTele:tg.length>0,tv:tm,total:vs.reduce(function(a,o){return a+o.m},0)+(tg.length?n:0)};
+if(!vs.length)toTele();
+if(!g)toTele();
+$("setup").classList.add("hide");$("show").classList.remove("hide");$("win").classList.add("hide");
+var b=$("board");b.style.height=(n*RH)+"px";
+b.innerHTML=S.names.map(function(nm,i){return'<div class="row" id="r'+i+'"><span class="rk"></span><span class="nm"><i class="fl">'+fh(nm)+'</i> '+esc(dn(nm))+'</span><span class="j">0</span><span class="t">–</span><span class="tot">0</span></div>'}).join("");
+R.done=0;draw();status()}
+function tot(i){return R.jt[i]+R.tt[i]}
+function draw(){var n=S.names.length,o=S.names.map(function(_,i){return i}).sort(function(a,b){return tot(b)-tot(a)||a-b});
+o.forEach(function(i,pos){var r=$("r"+i);r.style.transform="translateY("+pos*RH+"px)";r.querySelector(".rk").textContent=pos+1;
+r.querySelector(".j").textContent=R.jt[i];r.querySelector(".t").textContent=R.phase==="tele"||R.phase==="end"&&R.hasTele?R.tt[i]:"–";
+r.querySelector(".tot").textContent=tot(i);var old=r.querySelector(".pop");if(old)old.remove();
+if(R.last[i]){r.classList.add("hot");r.insertAdjacentHTML("beforeend",'<span class="pop">+'+R.last[i]+"</span>")}else r.classList.remove("hot")});
+$("prog").style.width=Math.min(100,R.done/R.total*100)+"%"}
+function status(){var s=$("stat"),c=$("cnt");
+if(R.phase==="jury"){s.textContent="Vote: "+dn(R.vs[R.v].name);c.textContent="Voter "+(R.v+1)+" of "+R.vs.length}
+else if(R.phase==="tele"){s.textContent="Televote";c.textContent="Entry "+(R.qi+1)+" of "+S.names.length}
+else{s.textContent="Voting complete";c.textContent="";var o=S.names.map(function(_,i){return i}).sort(function(a,b){return tot(b)-tot(a)||a-b});
+var w=$("win");w.textContent="Winner: "+dn(S.names[o[0]])+" ("+tot(o[0])+" pkt)";w.classList.remove("hide")}}
+function step(){if(R.phase==="end")return false;var fin=false;
+if(R.phase==="jury"){var vo=R.vs[R.v];if(R.p===0)R.last={};var t=vo.row[R.p],pt=vo.ps[R.p];if(t>=0&&pt&&t!==vo.p){R.jt[t]+=pt;R.last[t]=pt}R.p++;R.done++;
+if(R.p>=vo.m){fin=true;R.p=0;R.v++;if(R.v>=R.vs.length)toTele()}
+}else{R.last={};var i=R.q[R.qi];R.tt[i]+=R.tv[i];R.last[i]=R.tv[i];R.qi++;R.done++;fin=true;if(R.qi>=R.q.length){R.phase="end"}}
+if(R.phase==="end")R.last={};draw();status();return fin}
+$("scale").addEventListener("change",function(){var a=$("scale").value.split(/[\s,;]+/).map(Number).filter(function(x){return x>0&&isFinite(x)});
+a=a.filter(function(x,i){return a.indexOf(x)===i}).sort(function(x,y){return x-y});
+if(!a.length){$("scale").value=S.scale.join(", ");return}
+S.scale=a;gen(S);save();fillSlots();$("scale").value=a.join(", ");if(S.saved)grid()});
+$("saveV").addEventListener("click",function(){S.saved=true;save();grid();$("gridPanel").scrollIntoView({behavior:"smooth"})});
+function juryCells(gs){var n=S.names.length,vs=[],ix={},cell={},jt=S.names.map(function(){return 0});
+gs.forEach(function(g){voters(g).forEach(function(vo){var key=vo.p>=0?"p"+vo.p:"x"+norm(vo.name);
+if(!(key in ix)){ix[key]=vs.length;vs.push({key:key,name:vo.name,p:vo.p});cell[key]=S.names.map(function(){return 0})}
+var m=vm(g,vo.p<0),ps=g.scale.slice(g.scale.length-m);
+vo.row.forEach(function(t,k){if(t>=0&&t<n&&ps[k]&&t!==vo.p){cell[key][t]+=ps[k];jt[t]+=ps[k]}})})});
+vs=vs.map(function(v,i){return{v:v,i:i}}).sort(function(a,b){return((a.v.p<0)-(b.v.p<0))||(a.v.p>=0?a.v.p-b.v.p:a.i-b.i)}).map(function(x){return x.v});
+return{vs:vs,cell:cell,jt:jt}}
+function gridModel(){commitGrid();var g=S.grids[SEL],comb=VIEW==="combined",
+jg=comb?S.grids.filter(isJury):[g],tg=comb?S.grids.filter(isTele):[],J=juryCells(jg),
+tv=tg.map(function(x){return juryCells([x]).jt}),
+tot=S.names.map(function(_,i){return J.jt[i]+tv.reduce(function(a,t){return a+t[i]},0)}),
+ord=S.names.map(function(_,i){return i}).sort(function(a,b){return tot[b]-tot[a]||a-b}),
+cols=[{k:"rk",t:"#"},{k:"nm",t:"Participant"},{k:"tot",t:"Total"}];
+if(comb&&jg.length&&tg.length)cols.push({k:"jur",t:"Jury"});
+J.vs.forEach(function(vo){cols.push({k:"vot",key:vo.key,p:vo.p,t:dn(vo.name),f:fl(vo.name),fh:fh(vo.name)})});
+tg.forEach(function(x,gi){cols.push({k:"tel",gi:gi,t:x.name})});
+var rows=ord.map(function(i,r){return cols.map(function(c){
+if(c.k==="rk")return{t:String(r+1),h:1};
+if(c.k==="nm")return{l:1,f:fl(S.names[i]),fh:fh(S.names[i]),t:dn(S.names[i])};
+if(c.k==="vot")return c.p===i?{self:1}:{t:J.cell[c.key][i]?String(J.cell[c.key][i]):""};
+if(c.k==="jur")return{t:String(J.jt[i]),h:1,b:1};
+if(c.k==="tel")return{t:String(tv[c.gi][i]),h:1,b:1};
+return{t:String(tot[i]),h:1,b:1}})});
+return{cols:cols,rows:rows,comb:comb}}
+function gridHtml(M){var UC={rk:"cn",nm:"cp",tot:"ct",pts:"ct",jur:"cj",vot:"cv",tel:"ce"},
+h='<table><colgroup>'+M.cols.map(function(c){return'<col class="'+UC[c.k]+'">'}).join("")+'</colgroup><thead><tr>';
+M.cols.forEach(function(c){if(c.k==="vot"&&c.f)h+='<th class="fg" title="'+esc(c.t)+'"><i class="fl">'+c.fh+'</i></th>';else if(c.k==="vot")h+='<th class="v" title="'+esc(c.t)+'"><span>'+esc(c.t)+'</span></th>';
+else h+='<th'+(c.k==="rk"||c.k==="nm"?'':' class="b"')+'>'+esc(c.t)+'</th>'});
+h+='</tr></thead><tbody>';
+M.rows.forEach(function(row){h+='<tr>';row.forEach(function(d){
+if(d.self)h+='<td class="self"></td>';
+else if(d.l)h+='<td class="l"><i class="fl">'+d.fh+'</i> '+esc(d.t)+'</td>';
+else h+='<td'+(d.h?' class="hc'+(d.b?' b':'')+'"':'')+'>'+d.t+'</td>'});h+='</tr>'});
+return h+'</tbody></table>'}
+function grid(){$("grid").innerHTML=gridHtml(gridModel());$("gridPanel").classList.remove("hide");sizeGrid()}
+function sizeGrid(){var g=$("grid"),t=g.querySelector("table");if(!t)return;var av=g.clientWidth||900,U={cn:1.15,cp:6.2,ct:2,cj:1.55,ce:1.55,cv:1,cg:2},cols=[].slice.call(t.querySelectorAll("col")),u=0,R=Math.round;
+cols.forEach(function(c){u+=U[c.className]});var cs=Math.max(28,Math.min(60,Math.floor(av/u)));g.style.setProperty("--cs",cs+"px");
+var sum=0;cols.forEach(function(c){var w=R(cs*U[c.className]);c.style.width=w+"px";sum+=w});t.style.width=sum+"px"}
+window.addEventListener("resize",function(){if(S.saved)sizeGrid()});
+var CODES="AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW".split(" "),CM=null,DN={};
+function norm(s){return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim()}
+function cname(c,l){if(c==="XK")return l==="pl"?"Kosowo":"Kosovo";try{if(!DN[l])DN[l]=new Intl.DisplayNames([l],{type:"region"});return DN[l].of(c)||c}catch(e){return c}}
+function flag(c){return String.fromCodePoint(127397+c.charCodeAt(0),127397+c.charCodeAt(1))}
+function cmap(){if(CM)return CM;CM={};var al={"czech republic":"CZ","turkey":"TR","palestine":"PS","macedonia":"MK","uk":"GB","usa":"US","holandia":"NL","czechy":"CZ","turcja":"TR","palestyna":"PS","macedonia polnocna":"MK"};
+CODES.forEach(function(c){CM[norm(cname(c,"en"))]=c;CM[norm(cname(c,"pl"))]=c});for(var k in al)CM[k]=al[k];return CM}
+function fl(name){var c=cmap()[norm(name)];return c?flag(c):""}
+var NATIVE=(function(){try{var cv=document.createElement("canvas");cv.width=cv.height=40;var x=cv.getContext("2d",{willReadFrequently:true});x.font='28px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';x.textBaseline="top";x.fillStyle="#000";x.fillText("\uD83C\uDDF5\uD83C\uDDF1",0,2);var d=x.getImageData(0,0,40,40).data;for(var i=0;i<d.length;i+=4)if(d[i+3]>40&&(Math.abs(d[i]-d[i+1])>25||Math.abs(d[i+1]-d[i+2])>25))return true;return false}catch(e){return true}})();
+var FURL="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72/",FC={};
+function fimg(name){var c=cmap()[norm(name)];if(!c)return"";return FURL+[127397+c.charCodeAt(0),127397+c.charCodeAt(1)].map(function(n){return n.toString(16)}).join("-")+".png"}
+function fh(name){var e=fl(name);if(!e||NATIVE)return e;return'<img class="fi" alt="'+e+'" src="'+fimg(name)+'">'}
+function flagImg(x,name,px,py,sz){var im=FC[fimg(name)];if(im&&im.naturalWidth)x.drawImage(im,px,py,sz,sz)}
+function loadFlags(names){if(NATIVE)return Promise.resolve();return Promise.all(names.map(function(n){var u=fimg(n);if(!u||FC[u])return null;return new Promise(function(r){var im=new Image();im.crossOrigin="anonymous";im.onload=im.onerror=r;im.src=u;FC[u]=im})}))}
+function dn(name){var c=cmap()[norm(name)];return c?cname(c,"en"):name}
+function fillPick(){var o=CODES.map(function(c){return{c:c,n:cname(c,"en")}}).sort(function(a,b){return a.n.localeCompare(b.n,"en")});
+$("cpick").innerHTML=o.map(function(x){return'<option value="'+x.c+'">'+flag(x.c)+" "+esc(x.n)+"</option>"}).join("")}
+function prev(){$("fprev").innerHTML=$("names").value.split("\n").map(function(x){return x.trim()}).filter(Boolean).map(function(x){var f=fl(x);return f?'<i class="fl">'+fh(x)+"</i> "+esc(x):"<span>? "+esc(x)+"</span>"}).join(" · ")}
+$("names").addEventListener("input",prev);
+$("cadd").addEventListener("click",function(){var t=$("names");t.value=(t.value.trim()?t.value.replace(/\s+$/,"")+"\n":"")+cname($("cpick").value,"en");prev();applyNames()});
+
+function h2(n){return("0"+Math.round(n).toString(16)).slice(-2)}
+function toHex(c){return"#"+h2(c[0])+h2(c[1])+h2(c[2])}
+function dist(a,b){var r=a[0]-b[0],g=a[1]-b[1],bl=a[2]-b[2];return Math.sqrt(r*r+g*g+bl*bl)}
+function sat(c){var mx=Math.max(c[0],c[1],c[2]),mn=Math.min(c[0],c[1],c[2]);return mx?(mx-mn)/mx:0}
+function lm(c){return(c[0]*299+c[1]*587+c[2]*114)/1000}
+function mix(c,t,a){return[c[0]+(t-c[0])*a,c[1]+(t-c[1])*a,c[2]+(t-c[2])*a]}
+function palette(px,k){var mean=[0,0,0];px.forEach(function(p){mean[0]+=p[0];mean[1]+=p[1];mean[2]+=p[2]});mean=mean.map(function(v){return v/px.length});
+var cs=[px.reduce(function(b,p){return dist(p,mean)>dist(b,mean)?p:b},px[0]).slice()];
+while(cs.length<k){var far=null,fd=-1;px.forEach(function(p){var d=Math.min.apply(null,cs.map(function(c){return dist(p,c)}));if(d>fd){fd=d;far=p}});if(fd<12)break;cs.push(far.slice())}
+var cnt;for(var it=0;it<8;it++){var sm=cs.map(function(){return[0,0,0]});cnt=cs.map(function(){return 0});
+px.forEach(function(p){var bi=0,bd=1e9;cs.forEach(function(c,i){var d=dist(p,c);if(d<bd){bd=d;bi=i}});sm[bi][0]+=p[0];sm[bi][1]+=p[1];sm[bi][2]+=p[2];cnt[bi]++});
+cs=cs.map(function(c,i){return cnt[i]?[sm[i][0]/cnt[i],sm[i][1]/cnt[i],sm[i][2]/cnt[i]]:c})}
+return cs.map(function(c,i){return{c:c,n:cnt[i]}}).sort(function(a,b){return b.n-a.n}).map(function(x){return x.c})}
+function applyImage(img){var w=80,sc=Math.min(1,w/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(img.width*sc));cv.height=Math.max(1,Math.round(img.height*sc));
+var x=cv.getContext("2d");x.drawImage(img,0,0,cv.width,cv.height);var d=x.getImageData(0,0,cv.width,cv.height).data,px=[];
+for(var i=0;i<d.length;i+=4)if(d[i+3]>128)px.push([d[i],d[i+1],d[i+2]]);if(!px.length)return;
+var P=palette(px,6),bg=P[0],rest=P.slice(1);
+function pick(score,minD,avoid){var best=null,bs=-1e9;rest.forEach(function(c){if(avoid.some(function(a){return dist(a,c)<minD}))return;var v=score(c);if(v>bs){bs=v;best=c}});return best}
+var hd=pick(function(c){return sat(c)*100+dist(c,bg)/4},50,[bg]);
+if(!hd)hd=mix(bg,lm(bg)>140?0:255,.25);
+var gs=pick(function(c){return sat(c)*100+dist(c,bg)/4},45,[bg,hd]);
+if(!gs)gs=mix(hd,lm(hd)>140?0:255,.4);
+var ln=pick(function(c){return dist(c,bg)},35,[hd,gs]);
+if(!ln)ln=mix(bg,lm(bg)>140?0:255,.45);
+S.gb=toHex(bg);S.gh=toHex(hd);S.gs=toHex(gs);S.gl=toHex(ln);applyTheme();save();if(S.saved)grid()}
+function useImageFile(f){var m=$("gimgm");if(!f)return;m.textContent="";
+function fail(){m.textContent="Could not read this image. Try a JPG or PNG."}
+var fr=new FileReader();fr.onerror=fail;fr.onload=function(){var im=new Image();im.onload=function(){try{applyImage(im);m.textContent="Colors applied."}catch(e){fail()}};im.onerror=fail;im.src=fr.result};
+fr.readAsDataURL(f)}
+$("gimgf").addEventListener("change",function(){var f=this.files&&this.files[0];useImageFile(f);this.value=""});
+document.addEventListener("paste",function(e){var it=e.clipboardData&&e.clipboardData.items;if(!it)return;for(var i=0;i<it.length;i++)if(it[i].kind==="file"&&it[i].type.indexOf("image/")===0){var f=it[i].getAsFile();if(f){e.preventDefault();useImageFile(f)}return}});
+$("gpaste").addEventListener("click",function(){var m=$("gimgm");
+if(!navigator.clipboard||!navigator.clipboard.read){m.textContent="Click on the page and press Ctrl+V (Cmd+V) to paste an image.";return}
+navigator.clipboard.read().then(function(items){for(var i=0;i<items.length;i++){var t=items[i].types.filter(function(x){return x.indexOf("image/")===0})[0];if(t)return items[i].getType(t).then(useImageFile)}m.textContent="No image in the clipboard."}).catch(function(){m.textContent="Press Ctrl+V (Cmd+V) on the page to paste an image."})});
+
+var FF,FBASE='"Archivo","Segoe UI",system-ui,sans-serif',FKEY=KEY+"-font",FPRE=["Arial","Verdana","Tahoma","Trebuchet MS","Georgia","Times New Roman","Courier New","Impact","Comic Sans MS","Segoe UI","Helvetica","Palatino"],FLOC=[];
+function fclean(n){return String(n||"").replace(/["'\\<>]/g,"").trim()}
+function applyFont(){var n=fclean(S.font),st=n?'"'+n+'",'+FBASE:FBASE;document.documentElement.style.setProperty("--ff",st);FF=st}
+function fillFonts(){var sel=$("fsel"),cur=fclean(S.font),h='<option value="">Default (Archivo)</option><optgroup label="Common fonts">'+FPRE.map(function(f){return'<option value="'+f+'">'+f+'</option>'}).join("")+'</optgroup>';
+if(FLOC.length)h+='<optgroup label="My computer">'+FLOC.map(function(f){return'<option value="'+esc(f)+'">'+esc(f)+'</option>'}).join("")+'</optgroup>';
+if(cur&&FPRE.indexOf(cur)<0&&FLOC.indexOf(cur)<0)h+='<option value="'+esc(cur)+'">'+esc(cur)+'</option>';
+sel.innerHTML=h;sel.value=cur}
+function setFont(n,silent){S.font=fclean(n)||null;applyFont();fillFonts();$("ftype").value="";save();if(S.saved)grid();if(!silent)$("fmsg").textContent=S.font?"Font: "+S.font:"Default font."}
+$("fsel").addEventListener("change",function(){setFont(this.value)});
+$("ftype").addEventListener("change",function(){if(fclean(this.value))setFont(this.value)});
+$("floc").addEventListener("click",function(){var m=$("fmsg");
+if(!window.queryLocalFonts){m.textContent="This browser can't list fonts. Type the font name below or upload a font file.";return}
+m.textContent="Waiting for permission…";
+window.queryLocalFonts().then(function(a){var seen={};FLOC=[];a.forEach(function(f){var n=f.family;if(!seen[n]){seen[n]=1;FLOC.push(n)}});FLOC.sort(function(x,y){return x.localeCompare(y)});fillFonts();m.textContent=FLOC.length+" fonts found. Pick one from the list."}).catch(function(){m.textContent="No permission. Type the font name below or upload a font file."})});
+$("fup").addEventListener("click",function(){$("fupf").click()});
+function regFont(name,data){var ff=new FontFace(name,"url("+data+")");return ff.load().then(function(f){document.fonts.add(f)})}
+$("fupf").addEventListener("change",function(){var f=this.files&&this.files[0],inp=this,m=$("fmsg");if(!f)return;
+var name=fclean(f.name.replace(/\.[^.]+$/,"").replace(/[-_]+/g," "))||"Uploaded font",fr=new FileReader();
+fr.onerror=function(){m.textContent="Could not read this font file."};
+fr.onload=function(){var d=fr.result;regFont(name,d).then(function(){setFont(name,true);var ok=true;try{localStorage.setItem(FKEY,JSON.stringify({name:name,data:d}))}catch(e){ok=false}
+m.textContent="Font: "+name+(ok?"":" (too large to remember after reload)")}).catch(function(){m.textContent="This file is not a valid font."})};
+fr.readAsDataURL(f);inp.value=""});
+try{var fs=JSON.parse(localStorage.getItem(FKEY)||"null");if(fs&&fs.name&&fs.data)regFont(fs.name,fs.data).then(function(){if(S.saved)grid()}).catch(function(){})}catch(e){}
+FF=FBASE;applyFont();fillFonts();
+["gl","gh","gs","gb"].forEach(function(id){$(id).addEventListener("input",function(){S[id]=$(id).value;applyTheme();save()})});
+$("clr").addEventListener("click",function(){gen(S);save();fillSlots();if(S.saved)grid()});
+$("gres").addEventListener("click",function(){S.gl=S.gh=S.gs=S.gb=null;applyTheme();save()});
+function applyNames(){var n=$("names").value.split("\n").map(function(x){return x.trim()}).filter(Boolean).slice(0,40);
+if(n.length<3)return;commitGrid();
+var old=S.names,ix={},oldK=old.map(norm);n.forEach(function(nm,i){ix[norm(nm)]=i});
+S.grids.forEach(function(g){var oj=g.jury,sc=g.scale,om=Math.min(sc.length,old.length-1),ops=sc.slice(sc.length-om),jm={};
+old.forEach(function(nm,i){var o={};(oj[i]||[]).forEach(function(t,k){if(t>=0)o[ops[k]]=norm(old[t])});jm[norm(nm)]=o});
+var m=Math.min(sc.length,n.length-1),ps=sc.slice(sc.length-m);
+g.jury=n.map(function(nm,v){var o=jm[norm(nm)]||{};return ps.map(function(p){var t=ix[o[p]];return t!==undefined&&t!==v?t:-1})});
+var oxm=Math.min(sc.length,old.length),oxp=sc.slice(sc.length-oxm),nxm=Math.min(sc.length,n.length),nxp=sc.slice(sc.length-nxm);
+g.xv=(g.xv||[]).map(function(x){var o={};(x.votes||[]).forEach(function(t,k){if(t>=0)o[oxp[k]]=norm(old[t])});return{name:x.name,votes:nxp.map(function(p){var t=ix[o[p]];return t!==undefined?t:-1})}});
+g.skip=n.map(norm).filter(function(k){return oldK.indexOf(k)>=0?(g.skip||[]).indexOf(k)>=0:g.type==="tele"})});
+S.names=n;loadGrid(SEL);
+save();fillVoters();if(S.saved)grid();prev();renderOdds()}
+$("names").addEventListener("change",applyNames);
+var DL=null,EF='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+try{if(window.claude&&claude.use)claude.use("downloads").then(function(d){DL=d;if(d)document.querySelectorAll(".dl").forEach(function(b){b.classList.remove("hide")})}).catch(function(){})}catch(e){}
+function lum(h){var q=parseInt(h.slice(1),16);return((q>>16)*299+((q>>8)&255)*587+(q&255)*114)/1000}
+function pal(){var cs=getComputedStyle(document.documentElement),g=function(k){return cs.getPropertyValue(k).trim()},ink=g("--ink")||"#111",bg=g("--bg")||"#fff",sf=g("--surface")||"#fff";
+return{ink:ink,bg:bg,line:S.gl||"#2a9d8f",self:S.gs||"#4b2a8a",head:S.gh||sf,cell:S.gb||bg,hink:S.gh?(lum(S.gh)>140?"#111":"#fff"):ink,txt:S.gb?(lum(S.gb)>140?"#111":"#fff"):ink}}
+function drawTable(o){var sc=2,W=o.w.reduce(function(a,b){return a+b},0),T=o.title?64:0,k=o.fs||22,nk=o.nfs||k,H=T+o.hh+o.rows.length*o.rh,c=document.createElement("canvas");
+c.width=W*sc;c.height=H*sc;var x=c.getContext("2d");x.scale(sc,sc);x.fillStyle=o.bg;x.fillRect(0,0,W,H);
+if(o.title){x.fillStyle=o.ink;x.font='700 30px '+FF;x.textBaseline="middle";x.textAlign="left";x.fillText(o.title,14,T/2)}
+function cell(cx,cy,w,h,d,hd){x.fillStyle=d.self?o.self:(hd||d.h)?o.head:o.cell;x.fillRect(cx,cy,w,h);x.strokeStyle=o.line;x.lineWidth=1;x.strokeRect(cx+.5,cy+.5,w-1,h-1);
+if(d.self)return;x.fillStyle=(hd||d.h)?o.hink:o.txt;x.textBaseline="middle";var mid=cy+h/2;
+if(d.v){x.save();x.translate(cx+w/2,cy+h/2);x.rotate(-Math.PI/2);x.textAlign="left";x.font=(d.b?'800 ':'700 ')+(o.vfs||k)+'px '+FF;x.fillText(d.t||"",-h/2+9,0);x.restore();return}
+if(d.l){var px=cx+10;x.textAlign="left";x.textBaseline="alphabetic";if(d.f){x.font=Math.round(nk*1.3)+'px '+EF;var fm=x.measureText(d.f),fy=mid+nk*.64;if(fm&&fm.actualBoundingBoxAscent!=null&&fm.actualBoundingBoxAscent+fm.actualBoundingBoxDescent>0)fy=mid+1+(fm.actualBoundingBoxAscent-fm.actualBoundingBoxDescent)/2;if(NATIVE)x.fillText(d.f,px,fy);else flagImg(x,d.t,px,mid-nk*.65,nk*1.3);px+=Math.round(nk*1.85)}
+x.font=(o.fs?'500 ':'600 ')+nk+'px '+FF;x.save();x.beginPath();x.rect(cx,cy,w-4,h);x.clip();x.fillText(d.t||"",px,mid+nk*.36);x.restore();return}
+if(hd&&d.vf&&d.f&&!NATIVE){var z=Math.round(k*1.48);flagImg(x,d.t,cx+w/2-z/2,cy+h-Math.round(k*.95)-z/2,z);return}
+x.textAlign="center";var s=d.f||d.t||"";
+if(hd&&d.f&&!/^[A-Z0-9 ]+$/.test(d.f))x.font=Math.round(k*1.48)+'px '+EF;else x.font=(d.b?'800 ':hd?'700 ':'')+k+'px '+FF;
+x.fillText(s,cx+w/2,d.vf?cy+h-Math.round(k*.95):mid)}
+var cx=0;o.hdr.forEach(function(d,i){cell(cx,T,o.w[i],o.hh,d,true);cx+=o.w[i]});
+o.rows.forEach(function(r,ri){var cx=0,cy=T+o.hh+ri*o.rh;r.forEach(function(d,i){cell(cx,cy,o.w[i],o.rh,d,false);cx+=o.w[i]})});return c}
+function withFonts(txt,fn){var f=S.font,p=[loadFlags(S.names)];if(f&&document.fonts&&document.fonts.load){var q=f.replace(/["\\]/g,"");p.push(document.fonts.load('600 22px "'+q+'"'),document.fonts.load('700 22px "'+q+'"'))}Promise.all(p).then(function(){fn()},function(){fn()})}
+function savePng(c,name){c.toBlob(function(b){if(!b)return;if(DL)DL.save({filename:name,data:b}).catch(function(e){if(!e||e.code!=="declined")showPng(c)});else showPng(c)},"image/png")}
+function showPng(c){var d=$("pngView");d.querySelector("img").src=c.toDataURL("image/png");d.classList.remove("hide")}
+$("pngClose").addEventListener("click",function(){$("pngView").classList.add("hide")});
+function allFlags(){return S.names.map(fl).join("")}
+function gridPng(){var M=gridModel(),R=Math.round,UN={rk:1.15,nm:6.2,tot:2,pts:2,jur:1.55,vot:1,tel:1.55},u=0;
+M.cols.forEach(function(c){u+=UN[c.k]});var cw=Math.max(44,Math.min(60,Math.floor(1560/u))),w=M.cols.map(function(c){return R(cw*UN[c.k])}),
+hd=M.cols.map(function(c){var fg=c.k==="vot"&&c.f,vt=c.k==="vot"&&!c.f;return fg?{f:c.f,t:c.t,vf:1}:{t:c.t,b:(c.k==="rk"||c.k==="nm"||c.k==="vot")?0:1,v:vt?1:0}});
+withFonts(allFlags(),function(){var vfs=R(cw*.42),mc=document.createElement("canvas").getContext("2d"),mw=0;mc.font='800 '+vfs+'px '+FF;
+M.cols.forEach(function(c){if(c.k==="vot"&&!c.f)mw=Math.max(mw,mc.measureText(c.t).width)});
+var hh=Math.max(R(cw*1.13),Math.ceil(mw)+18);
+savePng(drawTable(Object.assign({},pal(),{title:S.title,w:w,hh:hh,rh:cw,fs:R(cw*.5),nfs:R(cw*.58),vfs:vfs,hdr:hd,rows:M.rows})),M.comb?"voting-grid-combined.png":"voting-grid.png")})}
+function boardPng(){if(!R)return;var o=S.names.map(function(_,i){return i}).sort(function(a,b){return tot(b)-tot(a)||a-b});
+var hd=[{t:"#"},{t:"Country"},{t:"Jury"},{t:"Tele"},{t:"Total"}],rows=o.map(function(i,r){return[{t:String(r+1)},{l:1,f:fl(S.names[i]),fh:fh(S.names[i]),t:dn(S.names[i])},{t:String(R.jt[i])},{t:R.hasTele&&R.phase!=="jury"?String(R.tt[i]):"–"},{t:String(tot(i))}]});
+withFonts(allFlags(),function(){savePng(drawTable(Object.assign({},pal(),{title:(S.title||"Scoreboard")+" – "+$("stat").textContent,w:[56,360,100,100,110],hh:56,rh:46,hdr:hd,rows:rows})),"scoreboard.png")})}
+$("gpng").addEventListener("click",gridPng);$("spng").addEventListener("click",boardPng);
+$("dlProj").addEventListener("click",function(){commitGrid();var j=JSON.stringify(S);if(DL)DL.save({filename:"scoreboard-project.json",data:j}).catch(function(){});else{$("pasteJ").value=j;$("lmsg").textContent="Copy this text and save it as a .json file (e.g. in Notepad)."}});
+function loadProject(txt){var m=$("lmsg");try{var o=JSON.parse(txt);if(!o||!Array.isArray(o.names)||o.names.length<3)throw 0;var n=o.names.length;
+function ok(g){return g&&Array.isArray(g.jury)&&g.jury.length===n&&Array.isArray(g.scale)}
+if(Array.isArray(o.grids)&&o.grids.length){if(!o.grids.every(ok))throw 0}else if(!ok(o))throw 0;
+o.v3=true;ensureGrids(o);S=o;SEL=0;VIEW="grid";save();fillSetup();prev();renderOdds();if(!S.saved)$("gridPanel").classList.add("hide");m.textContent="Project loaded: "+S.names.length+" participants, "+S.grids.length+" grid"+(S.grids.length>1?"s":"")+"."}catch(x){m.textContent="This is not a valid project file."}}
+function readFile(f){if(!f)return;var rd=new FileReader();rd.onload=function(){loadProject(rd.result)};rd.readAsText(f)}
+$("upBtn").addEventListener("click",function(){$("ldProj").click()});
+$("ldProj").addEventListener("change",function(e){readFile(e.target.files[0]);e.target.value=""});
+$("pasteBtn").addEventListener("click",function(){loadProject($("pasteJ").value)});
+["dragover","drop"].forEach(function(ev){$("pasteJ").addEventListener(ev,function(e){e.preventDefault();if(ev==="drop"&&e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])})});
+
+function newGrid(s,name,type){var t={names:s.names,scale:s.scale.slice(),xv:[]};gen(t);return{name:name,type:type||"jury",scale:t.scale,jury:t.jury,xv:[],skip:type==="tele"?s.names.map(norm):[]}}
+function isJury(g){return g.type!=="tele"}
+function isTele(g){return g.type==="tele"}
+function ensureGrids(s){if(!Array.isArray(s.grids)||!s.grids.length)s.grids=[{name:"Jury",type:"jury",scale:s.scale,jury:s.jury},newGrid(s,"Tele","tele")];
+s.grids.forEach(function(g,i){if(!g.type){var emp=(g.jury||[]).every(function(r){return(r||[]).every(function(t){return!(t>=0)})});g.type=(i>0&&emp&&/^tele/i.test(g.name||""))?"tele":"jury"}
+if(!Array.isArray(g.xv))g.xv=[];if(!Array.isArray(g.skip))g.skip=g.type==="tele"?s.names.map(norm):[];delete g.useTele;delete g.tele;if(!g.name)g.name="Grid "+(i+1)});
+var g=s.grids[0];s.scale=g.scale;s.jury=g.jury;s.xv=g.xv;s.skip=g.skip;delete s.useTele;delete s.tele}
+function commitGrid(){var g=S.grids&&S.grids[SEL];if(!g)return;g.scale=S.scale;g.jury=S.jury;g.xv=S.xv;g.skip=S.skip}
+function loadGrid(i){SEL=i;var g=S.grids[i];S.scale=g.scale;S.jury=g.jury;S.xv=g.xv;S.skip=g.skip}
+function renderTabs(){var h=S.grids.map(function(g,i){return'<button class="btn'+(VIEW==="grid"&&i===SEL?" main":"")+'" type="button" data-g="'+i+'">'+esc(g.name)+'</button>'}).join("")+'<button class="btn'+(VIEW==="combined"?" main":"")+'" type="button" data-g="c">Combined</button>';
+$("gtabs").innerHTML=h;$("gtabs2").innerHTML=h}
+function syncGrid(){$("scale").value=S.scale.join(", ");$("gname").value=S.grids[SEL].name;fillVoters();renderTabs();if(S.saved)grid()}
+function pickTab(e){var b=e.target.closest&&e.target.closest("button[data-g]");if(!b)return;stop();commitGrid();var v=b.dataset.g;if(v==="c")VIEW="combined";else{VIEW="grid";loadGrid(+v)}save();syncGrid()}
+$("gtabs").addEventListener("click",pickTab);$("gtabs2").addEventListener("click",pickTab);
+$("gname").addEventListener("input",function(){S.grids[SEL].name=this.value.slice(0,24)||("Grid "+(SEL+1));save();renderTabs();if(S.saved)grid()});
+function addGrid(type){if(S.grids.length>=8){alert("Maximum 8 grids.");return}commitGrid();var c=S.grids.filter(function(g){return g.type===type}).length,nm=type==="tele"?"Tele"+(c?" "+(c+1):""):"Grid "+(S.grids.length+1);S.grids.push(newGrid(S,nm,type));VIEW="grid";loadGrid(S.grids.length-1);save();syncGrid()}
+$("gadd").addEventListener("click",function(){addGrid("jury")});$("gaddt").addEventListener("click",function(){addGrid("tele")});
+var delT=null;$("gdel").addEventListener("click",function(){var b=this;if(S.grids.length<2){b.textContent="Need at least 1 grid";setTimeout(function(){b.textContent="Delete grid"},1800);return}
+if(!delT){b.textContent="Click again to delete";delT=setTimeout(function(){delT=null;b.textContent="Delete grid"},2500);return}
+clearTimeout(delT);delT=null;b.textContent="Delete grid";commitGrid();S.grids.splice(SEL,1);VIEW="grid";loadGrid(Math.min(SEL,S.grids.length-1));save();syncGrid()});
+var KCAL=1.43;
+function newOdds(name,type){return{name:name,type:type,q:10,off:[],r:{}}}
+function ensureOdds(){if(!S.odds||!Array.isArray(S.odds.tabs)||!S.odds.tabs.length)S.odds={sel:0,tabs:[newOdds("Semi-final 1","semi")]};
+S.odds.tabs.forEach(function(t,i){if(!Array.isArray(t.off))t.off=[];if(!t.r||typeof t.r!=="object")t.r={};if(!(t.q>0))t.q=10;if(t.type!=="final")t.type="semi";if(!(t.pp>0))t.pp=t.type==="final"?13:3;if(!(t.dev>=0))t.dev=20;if(!t.gen||typeof t.gen!=="object")t.gen={};if(t.model!=="prop")t.model="soft";if(!(t.k>=0))t.k=KCAL;if(!t.name)t.name="Tab "+(i+1)});
+if(typeof S.odds.host!=="string")S.odds.host="australia";if(typeof S.odds.ping!=="string")S.odds.ping="<@&1394730304169836594>";
+if(!(S.odds.sel>=0&&S.odds.sel<S.odds.tabs.length))S.odds.sel=0}
+function ot(){ensureOdds();return S.odds.tabs[S.odds.sel]}
+function parseR(s){var v=[],bad=false,str=String(s||"");str.split(/[\s,;]+/).filter(Boolean).forEach(function(x){var n=Number(x);if(isFinite(n)&&n>=0&&n<=10)v.push(n);else bad=true});
+return{v:v,bad:bad,avg:(!bad&&v.length)?v.reduce(function(a,b){return a+b},0)/v.length:null}}
+function oddsRes(t){var rows=[];S.names.forEach(function(nm,i){var k=norm(nm);if(t.off.indexOf(k)>=0)return;rows.push({i:i,nm:nm,k:k,p:parseR(t.r[k])})});
+var done=rows.filter(function(x){return x.p.avg!==null}).length;return{rows:rows,done:done,all:rows.length>0&&done===rows.length}}
+function fmtPct(p){if(p>0&&p<1)return"&lt;1%";return Math.round(p)+"%"}
+function oddsPcts(t,R){var P={},rows=R.rows,n=rows.length,sum=rows.reduce(function(a,x){return a+x.p.avg},0);
+if(t.type!=="semi"){if(t.model==="prop"){rows.forEach(function(x){P[x.k]=sum?x.p.avg/sum*100:0});return P}
+var mx=Math.max.apply(null,rows.map(function(x){return x.p.avg})),kk=t.k>=0?t.k:KCAL,ws=0;
+rows.forEach(function(x){var w=Math.exp(kk*(x.p.avg-mx));P[x.k]=w;ws+=w});rows.forEach(function(x){P[x.k]=P[x.k]/ws*100});return P}
+var rem=Math.min(t.q,n)*100,free=rows.slice();
+for(var it=0;it<=n&&free.length;it++){var fs=free.reduce(function(a,x){return a+x.p.avg},0),c=fs?rem/fs:rem/free.length,
+val=function(x){return fs?x.p.avg*c:c},over=free.filter(function(x){return val(x)>100});
+if(!over.length){free.forEach(function(x){P[x.k]=val(x)});break}
+over.forEach(function(x){P[x.k]=100;rem-=100});free=free.filter(function(x){return over.indexOf(x)<0})}
+rows.forEach(function(x){if(P[x.k]===undefined)P[x.k]=0});return P}
+function genOdds(){var t=ot(),R=oddsRes(t);if(!R.all){renderGen();return}
+var d=Math.min(100,t.dev>=0?t.dev:20)/100,pp=t.pp>0?t.pp:13,P=oddsPcts(t,R);t.gen={};
+R.rows.forEach(function(x){var f=1+d*(Math.random()+Math.random()-1);t.gen[x.k]=Math.max(0,Math.round(P[x.k]*pp*f))});
+save();renderGen()}
+function renderGen(){var t=ot(),R=oddsRes(t),el=$("ogres"),semi=t.type==="semi";
+if(!R.all){el.innerHTML='<p class="hint">Fill in all ratings first – results are generated from the odds.</p>';return}
+var g=t.gen||{},rows=R.rows.filter(function(x){return g[x.k]!==undefined});
+if(!rows.length||rows.length!==R.rows.length){el.innerHTML='<p class="hint">Press “Generate results”.</p>';return}
+var P=oddsPcts(t,R),q=Math.min(t.q,rows.length),total=0;
+rows.sort(function(a,b){return g[b.k]-g[a.k]||P[b.k]-P[a.k]||a.i-b.i});
+var h='<div class="ohead'+(semi?"":" nq")+'"><span>#</span><span>Country</span><span>Odds</span><span>Pts</span>'+(semi?"<span></span>":"")+'</div>';
+rows.forEach(function(x,r){total+=g[x.k];
+h+='<div class="orow'+(semi?"":" nq")+(semi&&r===q-1&&r<rows.length-1?" cut":"")+'"><span class="rk">'+(r+1)+'</span><span class="nm"><i class="fl">'+fh(x.nm)+'</i> '+esc(dn(x.nm))+'</span><span class="a">'+fmtPct(P[x.k])+'</span><span class="p">'+g[x.k]+'</span>'+(semi?'<span class="q '+(r<q?'yes">Q':'no">NQ')+'</span>':"")+'</div>'});
+h+='<p class="hint">Total points: '+total+'. Press “Generate results” again for a new random outcome.</p>';el.innerHTML=h}
+$("opp").addEventListener("input",function(){var n=parseFloat(this.value);if(n>0){ot().pp=n;save()}});
+$("odev").addEventListener("input",function(){var n=parseFloat(this.value);if(n>=0){ot().dev=Math.min(100,n);save()}});
+$("ogen").addEventListener("click",genOdds);
+function oddsRefresh(){save();renderOddsRes();renderGen();renderDiscord()}
+$("omodel").addEventListener("change",function(){ot().model=this.value==="prop"?"prop":"soft";oddsRefresh()});
+$("ok").addEventListener("input",function(){var n=parseFloat(this.value);if(n>=0){ot().k=Math.min(10,n);oddsRefresh()}});
+$("ohost").addEventListener("input",function(){ensureOdds();S.odds.host=this.value.replace(/[:\s]/g,"");save();renderDiscord()});
+$("oping").addEventListener("input",function(){ensureOdds();S.odds.ping=this.value;save();renderDiscord()});
+$("ocopy").addEventListener("click",function(){var ta=$("odtxt"),b=this;function done(){b.textContent="Copied!";setTimeout(function(){b.textContent="Copy text"},1500)}
+function old(){try{ta.select();document.execCommand("copy");done()}catch(e){}}
+if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(done,old);else old()});$("ocl").addEventListener("click",function(){ot().gen={};save();renderGen()});
+function ecode(name){var k=norm(dn(name)),o={"cape verde":"cape_verde","turkey":"turkiye","palestinian territories":"palestine","czech republic":"czechia"};return o[k]||k.replace(/[^a-z0-9]/g,"")}
+function dpct(p){return(p<1?"<1%":Math.round(p)+"%").replace(/0/g,"O")}
+function discordText(t,R){var P=oddsPcts(t,R),o=R.rows.slice().sort(function(a,b){return P[b.k]-P[a.k]||a.i-b.i}),host=(S.odds.host||"australia").replace(/:/g,""),ping=S.odds.ping||"",
+L=["# :"+host+": Grand Final Odds","","> :trophy: **Winner**",">"];
+o.forEach(function(x,r){var n=r+1,lab=("0"+n).slice(-2).replace(/0/g,"O"),nm=dn(x.nm);
+L.push("> ` "+lab+" ` :"+ecode(x.nm)+": "+(n<=10?"**"+nm+"**":nm)+" | ` "+dpct(P[x.k])+" `");
+if((n===1||n===3||n===10||n===20)&&n<o.length)L.push(">")});
+L.push("","-# "+ping+" ","","-# activity check :: :"+host+":");return L.join("\n")}
+function renderDiscord(){var t=ot();if(t.type!=="final")return;var R=oddsRes(t);$("odtxt").value=R.all?discordText(t,R):"Fill in all ratings to generate the Discord text."}
+function renderOtabs(){var O=S.odds;$("otabs").innerHTML=O.tabs.map(function(x,i){return'<button class="btn'+(i===O.sel?" main":"")+'" type="button" data-o="'+i+'">'+esc(x.name)+'</button>'}).join("")}
+function renderOdds(){ensureOdds();var t=ot();renderOtabs();$("oname").value=t.name;$("oqwrap").classList.toggle("hide",t.type!=="semi");$("oq").value=t.q;$("opp").value=t.pp;$("odev").value=t.dev;$("ok").value=t.k;$("omodel").value=t.model;$("omwrap").classList.toggle("hide",t.type!=="final");$("odw").classList.toggle("hide",t.type!=="final");$("ohost").value=S.odds.host;$("oping").value=S.odds.ping;$("oin").innerHTML=S.names.map(function(nm,i){var k=norm(nm),on=t.off.indexOf(k)<0;
+return'<div class="oin"><input type="checkbox" data-ok="'+i+'"'+(on?" checked":"")+' aria-label="Include '+esc(dn(nm))+'"><span class="nm"><i class="fl">'+fh(nm)+'</i> '+esc(dn(nm))+'</span><input type="text" data-oi="'+i+'" value="'+esc(t.r[k]||"")+'" placeholder="Ratings 0–10, e.g. 3, 10, 5, 0" '+(on?"":"disabled ")+'aria-label="Ratings for '+esc(dn(nm))+'"><span class="oa hint" data-oa="'+i+'"></span></div>'}).join("");
+oddsLive()}
+function oddsLive(){var t=ot();S.names.forEach(function(nm,i){var a=document.querySelector('[data-oa="'+i+'"]'),inp=document.querySelector('[data-oi="'+i+'"]');if(!a||!inp)return;
+var p=parseR(t.r[norm(nm)]);a.textContent=p.bad?"invalid":(p.avg!==null?"avg "+p.avg.toFixed(2):"");inp.style.borderColor=p.bad?"#e5484d":""});renderOddsRes();renderGen();renderDiscord()}
+function renderOddsRes(){var t=ot(),R=oddsRes(t),el=$("ores"),semi=t.type==="semi";
+if(!R.rows.length){el.innerHTML='<p class="hint">Tick at least one country.</p>';return}
+if(!R.all){el.innerHTML='<p class="hint">Filled '+R.done+' of '+R.rows.length+' countries. Fill in every ticked country (ratings 0–10) to see the percentages.</p>';return}
+var sum=R.rows.reduce(function(a,x){return a+x.p.avg},0),P=oddsPcts(t,R),o=R.rows.slice().sort(function(a,b){return b.p.avg-a.p.avg||a.i-b.i}),q=Math.min(t.q,o.length),
+h='<div class="ohead'+(semi?"":" nq")+'"><span>#</span><span>Country</span><span>Avg</span><span>%</span>'+(semi?"<span></span>":"")+'</div>';
+o.forEach(function(x,r){var pc=P[x.k];
+h+='<div class="orow'+(semi?"":" nq")+(semi&&r===q-1&&r<o.length-1?" cut":"")+'"><span class="rk">'+(r+1)+'</span><span class="nm"><i class="fl">'+fh(x.nm)+'</i> '+esc(dn(x.nm))+'</span><span class="a">'+x.p.avg.toFixed(2)+'</span><span class="p">'+fmtPct(pc)+'</span>'+(semi?'<span class="q '+(r<q?'yes">Q':'no">NQ')+'</span>':"")+'</div>'});
+h+='<p class="hint">'+(semi?'Odds are scaled so that all countries together add up to Q × 100% ('+(Math.min(t.q,o.length)*100)+'%), max 100% per country.':(t.model==="prop"?'Percentage = country average ÷ sum of all averages ('+sum.toFixed(2)+').':'Winner odds = exp(k × average) ÷ sum over all countries, k = '+t.k+'. Adds up to 100%.'))+'</p>';el.innerHTML=h}
+$("otabs").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button[data-o]");if(!b)return;S.odds.sel=+b.dataset.o;save();renderOdds()});
+$("oname").addEventListener("input",function(){var t=ot();t.name=this.value.slice(0,24)||("Tab "+(S.odds.sel+1));save();renderOtabs()});
+$("oq").addEventListener("input",function(){var n=parseInt(this.value,10);if(n>0){ot().q=n;save();renderOddsRes();renderGen()}});
+function addOdds(type){ensureOdds();if(S.odds.tabs.length>=12){alert("Maximum 12 tabs.");return}var c=S.odds.tabs.filter(function(x){return x.type===type}).length,nm=type==="semi"?"Semi-final "+(c+1):"Grand final"+(c?" "+(c+1):"");S.odds.tabs.push(newOdds(nm,type));S.odds.sel=S.odds.tabs.length-1;save();renderOdds()}
+$("oadds").addEventListener("click",function(){addOdds("semi")});$("oaddf").addEventListener("click",function(){addOdds("final")});
+var odT=null;$("odel").addEventListener("click",function(){var b=this;ensureOdds();if(S.odds.tabs.length<2){b.textContent="Need at least 1 tab";setTimeout(function(){b.textContent="Delete tab"},1800);return}
+if(!odT){b.textContent="Click again to delete";odT=setTimeout(function(){odT=null;b.textContent="Delete tab"},2500);return}
+clearTimeout(odT);odT=null;b.textContent="Delete tab";S.odds.tabs.splice(S.odds.sel,1);S.odds.sel=Math.min(S.odds.sel,S.odds.tabs.length-1);save();renderOdds()});
+function oddsAll(on){var t=ot(),ks=S.names.map(norm);t.off=t.off.filter(function(k){return ks.indexOf(k)<0});if(!on)t.off=t.off.concat(ks);save();renderOdds()}
+$("oall").addEventListener("click",function(){oddsAll(true)});$("onone").addEventListener("click",function(){oddsAll(false)});
+$("oin").addEventListener("input",function(e){var i=e.target.dataset.oi;if(i===undefined)return;ot().r[norm(S.names[+i])]=e.target.value;save();oddsLive()});
+$("oin").addEventListener("change",function(e){var i=e.target.dataset.ok;if(i===undefined)return;var t=ot(),k=norm(S.names[+i]),ix=t.off.indexOf(k);if(e.target.checked){if(ix>=0)t.off.splice(ix,1)}else if(ix<0)t.off.push(k);save();renderOdds()});
+
+function dEns(){if(!S.draw||typeof S.draw!=="object")S.draw={list:"",a:null,b:null};return S.draw}
+function dList(){var seen={},out=[];$("dtxt").value.split("\n").forEach(function(x){x=x.trim();var k=norm(x);if(x&&!seen[k]){seen[k]=1;out.push(x)}});return out}
+function dFill(){var D=dEns();$("dtxt").value=D.list||"";dRender()}
+function dRender(){var D=dEns(),el=$("dres"),h="";
+function rows(a){return a.map(function(x,i){return'<div class="orow drw"><span class="rk">'+(i+1)+'</span><span class="nm"><i class="fl">'+fh(x)+'</i> '+esc(dn(x))+'</span></div>'}).join("")}
+function col(t,a){return'<div><h3 class="drw-h">'+t+' ('+a.length+')</h3>'+rows(a)+'</div>'}
+if(D.a&&D.b)h+='<div class="cols">'+col("Semi-final 1",D.a)+col("Semi-final 2",D.b)+'</div>';
+if(D.f)h+='<div style="margin-top:14px">'+col("Grand final – running order",D.f)+'</div>';
+el.innerHTML=h}
+function dDraw(){var l=dList(),D=dEns();$("dmsg").textContent="";
+if(l.length<2){$("dmsg").textContent="Add at least 2 countries.";return}
+for(var i=l.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=l[i];l[i]=l[j];l[j]=t}
+var h=Math.ceil(l.length/2);D.list=$("dtxt").value;D.a=l.slice(0,h);D.b=l.slice(h);save();dRender()}
+function dShuf(l){for(var i=l.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=l[i];l[i]=l[j];l[j]=t}return l}
+function dDrawF(){var l=dList(),D=dEns();$("dmsg").textContent="";
+if(l.length<2){$("dmsg").textContent="Add at least 2 countries.";return}
+D.list=$("dtxt").value;D.f=dShuf(l);save();dRender()}
+$("ddraw").addEventListener("click",dDraw);$("ddrawf").addEventListener("click",dDrawF);
+$("dtxt").addEventListener("input",function(){dEns().list=this.value;save()});
+$("dadd").addEventListener("click",function(){var t=$("dtxt");t.value=(t.value.trim()?t.value.replace(/\s+$/,"")+"\n":"")+cname($("dpick").value,"en");dEns().list=t.value;save()});
+$("dpart").addEventListener("click",function(){$("dtxt").value=S.names.join("\n");dEns().list=$("dtxt").value;save()});
+$("dclr").addEventListener("click",function(){var D=dEns();D.a=null;D.b=null;D.f=null;save();dRender()});
+$("dcopy").addEventListener("click",function(){var D=dEns(),b=this,P=[];
+function nm(a){return a.map(function(x,i){return(i+1)+". "+dn(x)}).join("\n")}
+if(D.a&&D.b){P.push("Semi-final 1:\n"+nm(D.a));P.push("Semi-final 2:\n"+nm(D.b))}
+if(D.f)P.push("Grand final – running order:\n"+nm(D.f));
+if(!P.length){$("dmsg").textContent="Draw first.";return}
+var txt=P.join("\n\n");
+var ta=document.createElement("textarea");
+function done(){b.textContent="Copied!";setTimeout(function(){b.textContent="Copy text"},1500)}
+function old(){try{ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);done()}catch(e){}}
+if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,old);else old()});
+function dInit(){$("dpick").innerHTML=$("cpick").innerHTML;dFill()}
+fillSetup();fillPick();dInit();prev();renderOdds();
+</script>
+</body>
+</html>
